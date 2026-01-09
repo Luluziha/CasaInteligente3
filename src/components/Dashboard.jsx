@@ -11,8 +11,9 @@ import EnergyCard from "./EnergyCard";
 import LightsControl from "./LightsControl";
 import Arduino from "./Arduino";
 import ProfileCard from "./ProfileCard";
-import CasaIcon from "../assets/casa-inteligente (1).png";
+import FireAlertOverlay from "./FireAlertOverlay";
 
+import CasaIcon from "../assets/casa-inteligente (1).png";
 
 export function Dashboard({ darkMode, onToggleDarkMode }) {
   const [connection, setConnection] = useState(null);
@@ -22,14 +23,26 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
   const [isBirthday, setIsBirthday] = useState(false);
   const [greeting, setGreeting] = useState("Olá");
 
+  
   const [temperature, setTemperature] = useState(23);
+  //teste para verificar se alerta ttoca em 50 graus 
+  useEffect(() => {
+    setTemperature(60);
+  }, []);
+
   const [showTemperature, setShowTemperature] = useState(false);
   const [humidity, setHumidity] = useState(65);
   const [batteryPercentage, setBatteryPercentage] = useState(10);
   const [batteryAmperage, setBatteryAmperage] = useState(12.5);
 
+  // 🔥 ALERTA DE INCÊNDIO
+  const [fireAlertVisible, setFireAlertVisible] = useState(false);
+  const [fireAlertCiente, setFireAlertCiente] = useState(false);
+
   const user = JSON.parse(localStorage.getItem("user")) || {};
 
+
+    //simula dados reais a cada 3s
   useEffect(() => {
     const interval = setInterval(() => {
       setTemperature(v => v + (Math.random() - 0.5));
@@ -47,26 +60,34 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
       const today = new Date();
       const birth = new Date(user.nascimento);
 
-      const birthDay = birth.getUTCDate();
-      const birthMonth = birth.getUTCMonth();
-      const todayDay = today.getUTCDate();
-      const todayMonth = today.getUTCMonth();
-
-      if (birthDay === todayDay && birthMonth === todayMonth) {
+      if (
+        birth.getUTCDate() === today.getUTCDate() &&
+        birth.getUTCMonth() === today.getUTCMonth()
+      ) {
         setIsBirthday(true);
       }
     }
 
     return () => clearInterval(interval);
   }, []);
+
+  //alerta, para de tocar após usuário clicar em ciente
+  useEffect(() => {
+  if (temperature >= 50 && !fireAlertCiente) {
+    setFireAlertVisible(true);
+  }
+}, [temperature, fireAlertCiente]);
+
+
   { connection && <SerialMonitor connection={connection} onDataReceived={handleSerialData} /> }
   return (
     <Arduino>
       <div className="p-4 md:p-8 relative min-h-screen">
 
+       
         <header className="mb-10 flex justify-between items-center gap-6">
           <div>
-            <h1 className="flex items-center justify-center text-4xl font-bold bg-gradient-to-r from-purple-600 via-cyan-500 to-pink-500 bg-clip-text text-transparent">
+            <h1 className="flex items-center text-4xl font-bold bg-gradient-to-r from-purple-600 via-cyan-500 to-pink-500 bg-clip-text text-transparent">
               <img
                 src={CasaIcon}
                 alt="Casa Inteligente"
@@ -75,7 +96,10 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
               Smart Home
             </h1>
 
-            <p className="mt-3 text-sm tracking-wide text-slate-500">Central de Controle</p>
+            <p className="mt-3 text-sm tracking-wide text-slate-500">
+              Central de Controle
+            </p>
+
             <h2 className="mt-4 text-2xl font-bold bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent">
               {greeting}, {user?.nome || "Usuário"} 👋
             </h2>
@@ -84,29 +108,17 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
           <div className="flex items-center gap-4">
             <button
               onClick={onToggleDarkMode}
-              className="relative p-3 rounded-xl bg-white/70 dark:bg-slate-700/60 backdrop-blur-sm border border-slate-200 dark:border-slate-600 shadow-md hover:scale-105 transition-all duration-300"
+              className="relative p-3 rounded-xl bg-white/70 dark:bg-slate-700/60 backdrop-blur-sm border shadow-md hover:scale-105 transition-all"
             >
-              <span
-                className={`absolute inset-0 flex items-center justify-center transition-all duration-500
-      ${darkMode ? "rotate-0 opacity-100" : "rotate-180 opacity-0"}`}
-              >
-                <Sun className="w-6 h-6 text-yellow-400 drop-shadow-md" />
-              </span>
-
-              <span
-                className={`absolute inset-0 flex items-center justify-center transition-all duration-500
-      ${!darkMode ? "rotate-0 opacity-100" : "-rotate-180 opacity-0"}`}
-              >
-                <Moon className="w-6 h-6 text-indigo-500 drop-shadow-md" />
-              </span>
-
-              <span className="opacity-0">
-                <Sun className="w-6 h-6" />
-              </span>
+              {darkMode ? (
+                <Sun className="w-6 h-6 text-yellow-400" />
+              ) : (
+                <Moon className="w-6 h-6 text-indigo-500" />
+              )}
             </button>
 
             <img
-              src={user?.foto || "https://via.placeholder.com/80"}
+              src={user?.foto || "../assets/placeholder.png"}
               className="w-20 h-20 rounded-full cursor-pointer border-2 border-cyan-400 shadow-md object-cover"
               onClick={() => setShowProfile(!showProfile)}
             />
@@ -127,31 +139,42 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
           )}
         </header>
 
-
+        
         {isBirthday && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur">
             <div className="relative w-full max-w-md rounded-3xl bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 p-8 text-white shadow-2xl">
-              <button onClick={() => setIsBirthday(false)} className="absolute top-4 right-4 text-xl">✕</button>
-              <img src="https://cdn-icons-png.flaticon.com/512/3159/3159066.png" className="w-28 mx-auto mb-4" />
-              <h2 className="text-3xl font-extrabold text-center">Feliz Aniversário, {user?.nome}! 🎉</h2>
-              <p className="mt-4 text-center"><b>Que seu dia seja incrível!</b></p>
+              <button
+                onClick={() => setIsBirthday(false)}
+                className="absolute top-4 right-4 text-xl"
+              >
+                ✕
+              </button>
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/3159/3159066.png"
+                className="w-28 mx-auto mb-4"
+              />
+              <h2 className="text-3xl font-extrabold text-center">
+                Feliz Aniversário, {user?.nome}! 🎉
+              </h2>
             </div>
           </div>
         )}
 
-
+      
         {!showLights && !showTemperature && !showWeather ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <TemperatureCard
-              temperature={connection}
+              temperature={temperature}
               humidity={humidity}
               onClick={() => setShowTemperature(true)}
             />
 
             <WeatherCard onClick={() => setShowWeather(true)} />
             <DateTimeCard />
-            <EnergyCard batteryPercentage={batteryPercentage} batteryAmperage={batteryAmperage} />
-
+            <EnergyCard
+              batteryPercentage={batteryPercentage}
+              batteryAmperage={batteryAmperage}
+            />
 
             <div
               onClick={() => setShowLights(true)}
@@ -168,9 +191,24 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
           <LightsControl onBack={() => setShowLights(false)} />
         ) : showTemperature ? (
           <TemperatureControl onBack={() => setShowTemperature(false)} />
-        ) : showWeather ? (
+        ) : (
           <WeatherForecast onBack={() => setShowWeather(false)} />
-        ) : null}
+        )}
+
+        
+
+        <FireAlertOverlay //logica do card de alerta de incendio
+          visivel={fireAlertVisible}
+          ciente={fireAlertCiente}
+          temperatura={temperature}
+          onCiente={() => {
+            setFireAlertCiente(true);   // reconhece o incendio
+          }}
+          onFechar={() => {
+            setFireAlertVisible(false); // fecha visualmente
+          }}
+        />
+
       </div>
     </Arduino>
   );
