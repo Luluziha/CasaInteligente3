@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+
 
 export default function PerfilScreen() {
   const navigate = useNavigate();
@@ -36,6 +38,18 @@ export default function PerfilScreen() {
     <div className="min-h-screen flex items-center justify-center 
       bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-400
       dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900 p-4">
+        <button
+  type="button"
+  onClick={() => navigate(-1)}
+  className="absolute top-6 left-6 flex items-center gap-2 px-4 py-2 rounded-xl
+             bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm
+             border border-purple-200 dark:border-purple-800
+             hover:scale-105 transition-transform shadow-lg"
+>
+  <ArrowLeft className="w-5 h-5 text-white-700" />
+  <span className="text-white-700 font-medium">Voltar</span>
+</button>
+
 
       <form
         onSubmit={handleSave}
