@@ -14,6 +14,8 @@ import ProfileCard from "./ProfileCard";
 import FireAlertOverlay from "./FireAlertOverlay";
 
 import CasaIcon from "../assets/casa-inteligente (1).png";
+const FIRE_ALERT_INTERVAL = 15000; // 30 segundos
+
 
 export function Dashboard({ darkMode, onToggleDarkMode }) {
   const [connection, setConnection] = useState(null);
@@ -23,7 +25,8 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
   const [isBirthday, setIsBirthday] = useState(false);
   const [greeting, setGreeting] = useState("Olá");
 
-  
+
+
   const [temperature, setTemperature] = useState(23);
   //teste para verificar se alerta ttoca em 50 graus 
   useEffect(() => {
@@ -38,11 +41,12 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
   // 🔥 ALERTA DE INCÊNDIO
   const [fireAlertVisible, setFireAlertVisible] = useState(false);
   const [fireAlertCiente, setFireAlertCiente] = useState(false);
+  const [lastFireAlertTime, setLastFireAlertTime] = useState(0);
 
   const user = JSON.parse(localStorage.getItem("user")) || {};
 
 
-    //simula dados reais a cada 3s
+  //simula dados reais a cada 3s
   useEffect(() => {
     const interval = setInterval(() => {
       setTemperature(v => v + (Math.random() - 0.5));
@@ -73,10 +77,19 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
 
   //alerta, para de tocar após usuário clicar em ciente
   useEffect(() => {
-  if (temperature >= 50 && !fireAlertCiente) {
-    setFireAlertVisible(true);
-  }
-}, [temperature, fireAlertCiente]);
+    const now = Date.now();
+
+    if (
+      temperature >= 50 &&
+      !fireAlertVisible &&
+      !fireAlertCiente &&
+      now - lastFireAlertTime > FIRE_ALERT_INTERVAL
+    ) {
+      setFireAlertVisible(true);
+      setLastFireAlertTime(now);
+    }
+  }, [temperature, fireAlertVisible, fireAlertCiente, lastFireAlertTime]);
+
 
 
   { connection && <SerialMonitor connection={connection} onDataReceived={handleSerialData} /> }
@@ -84,7 +97,7 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
     <Arduino>
       <div className="p-4 md:p-8 relative min-h-screen">
 
-       
+
         <header className="mb-10 flex justify-between items-center gap-6">
           <div>
             <h1 className="flex items-center text-4xl font-bold bg-gradient-to-r from-purple-600 via-cyan-500 to-pink-500 bg-clip-text text-transparent">
@@ -139,7 +152,7 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
           )}
         </header>
 
-        
+
         {isBirthday && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur">
             <div className="relative w-full max-w-md rounded-3xl bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 p-8 text-white shadow-2xl">
@@ -160,7 +173,7 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
           </div>
         )}
 
-      
+
         {!showLights && !showTemperature && !showWeather ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <TemperatureCard
@@ -195,9 +208,21 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
           <WeatherForecast onBack={() => setShowWeather(false)} />
         )}
 
-        
 
-        <FireAlertOverlay //logica do card de alerta de incendio
+        <FireAlertOverlay
+          visivel={fireAlertVisible}
+          ciente={fireAlertCiente}
+          temperatura={temperature}
+          onCiente={() => setFireAlertCiente(true)}
+          onFechar={() => {
+            setFireAlertVisible(false);
+            setLastFireAlertTime(Date.now()); // inicia cooldown
+          }}
+        />
+
+
+        {/*}
+        / <FireAlertOverlay //logica do card de alerta de incendio
           visivel={fireAlertVisible}
           ciente={fireAlertCiente}
           temperatura={temperature}
@@ -207,7 +232,7 @@ export function Dashboard({ darkMode, onToggleDarkMode }) {
           onFechar={() => {
             setFireAlertVisible(false); // fecha visualmente
           }}
-        />
+        />*/}
 
       </div>
     </Arduino>
